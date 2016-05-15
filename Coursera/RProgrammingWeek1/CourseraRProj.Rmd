@@ -73,3 +73,48 @@ library(knitr)
 kable(summary(out)$coef, digits=2)
 ```
 
+```{r}
+mad_libs <- function(...){
+  # Do your argument unpacking here!
+    
+  args <- list(...)
+  
+  place <- (args[["place"]])
+  adjective <- (args[["adjective"]])
+  noun <- (args[["noun"]])
+  
+  paste("News from", place, "today where", adjective, "students took to the streets in protest of the new", noun, "being installed on campus.")
+}
+```
+
+```{r}
+"%p%" <- function(first,second){ # Remember to add arguments!
+  paste(first,second)
+}
+```
+
+
+```{r}
+d1 <- Sys.Date()
+class(d1)
+unclass(d1)
+d2 <- as.Date("1969-01-01")
+unclass(d2)
+t1<-Sys.time()
+unclass(t1) #number of seconds since beginning of 1970
+t2<-as.POSIXlt(Sys.time())
+unclass(t2)
+str(unclass(t2))
+t2$min
+weekdays(d1)
+months(t1)
+quarters(t2)
+t3 <- "October 17, 1986 08:24"
+t4<-strptime(t3, "%B %d, %Y %H:%M") 
+t4
+Sys.time() > t1
+Sys.time() - t1
+difftime(Sys.time(), t1, units = 'days')
+```
+
+
