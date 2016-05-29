@@ -1,0 +1,330 @@
+---
+title: "RProgrammingWeek4.Rmd"
+author: "Serge Ballif"
+date: "May 22, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Simulation and Profiling
+### `str` function
+- a diagnostic function like `summary`
+- well suited for compactly displaying large lists (even nested lists)
+- gives one line of output per object
+
+```{r}
+str(str)
+str(lm)
+x <- rnorm(100,2,4)
+summary(x)
+str(x)
+f <- gl(40,10)
+str(f)
+summary(f)
+library(datasets)
+head(airquality)
+str(airquality)
+m <-matrix(rnorm(100),10,10)
+str(m)
+m[,1]
+s <- split(airquality,airquality$Month)
+str(s)
+```
+
+### Simulation - generating random numbers
+- `rnorm`: generate random Normal variates with a given mean and standard deviation
+- `dnorm`: evaluate the Normal probability density (with a given mean/SD) at a point (or vector of
+points)
+- `pnorm`: evaluate the cumulative distribution function for a Normal distribution
+- `rpois`: generate random Poisson variates with a given rate 
+
+Probability distribution functions usually have four functions associated with them. The functions are
+prefixed with a
+- `d` for density
+- `r` for random number generation
+- `p` for cumulative distribution
+- `q` for quantile function
+
+Default values for norm:
+```{r, eval=FALSE}
+dnorm(x, mean = 0, sd = 1, log = FALSE)
+pnorm(q, mean = 0, sd = 1, lower.tail = TRUE, log.p = FALSE)
+qnorm(p, mean = 0, sd = 1, lower.tail = TRUE, log.p = FALSE)
+rnorm(n, mean = 0, sd = 1)
+```
+If $\Phi$ is the cumulative distribution function for a standard Normal distribution, then `pnorm(q)` = $\Phi(p)$ and `qnorm(p)` = $\Phi(^{-1}(q)$.
+
+```{r}
+x <- rnorm(10)
+x
+x <- rnorm(10, 20, 2) 
+x
+summary(x)
+set.seed(1)
+rnorm(5)
+rnorm(5)
+set.seed(1)
+rnorm(5)
+```
+
+Generating Poisson data:
+```{r}
+rpois(10, 1)
+rpois(10, 2)
+rpois(10, 20)
+ppois(2, 2) ## Cumulative distribution P(X <=2)
+ppois(4, 2) ## Pr(X <= 4)
+ppois(6, 2)## Pr(X <= 6)
+```
+
+
+### Generating Random numbers from a model.
+Suppose we want to simulate from the following linear model
+\[
+y=\beta_0+\beta_1x+\varepsilon
+\]
+where $\varepsilon\sim\mathcal{N}(0,2^2)$. Assume $x\sim \mathcal{N}(0,1^2)$, $\beta_0=0.5$ and $\beta_1=2$.
+
+```{r}
+set.seed(20)
+x<- rnorm(100)
+e=rnorm(100,0,2)
+y <- 0.5+2*x+e
+summary(y)
+plot(x,y)
+```
+
+How about if `x` is binary?
+```{r}
+set.seed(10)
+x <- rbinom(100, 1, 0.5)
+e <- rnorm(100, 0, 2)
+y <- 0.5 + 2 * x + e
+summary(y)
+plot(x,y)
+```
+
+Suppose we want to simulate from a Poisson model where $Y\sim\text{Poisson}(\mu)$, $\log \mu=\beta_0+\beta_1 x$.
+\[
+y=\beta_0+\beta_1x+\varepsilon
+\]
+and $\beta_0=0.5$ and $\beta_1=0.3$. We need to use the `rpois` function for this.
+```{r}
+set.seed(1)
+x<-rnorm(100)
+log.mu <- 0.5 + 0.3 * x
+y <- rpois(100, exp(log.mu))
+summary(y)
+plot(x,y)
+```
+
+
+### Simulation - Random Sampling
+The sample function draws randomly from a specified set of (scalar) objects allowing you to sample from arbitrary distributions
+
+```{r}
+ set.seed(1)
+sample(1:10, 4)
+sample(1:10, 4)
+sample(letters, 5)
+sample(1:10) ## permutation
+sample(1:10)
+sample(1:10, replace = TRUE) ## Sample w/replacement
+```
+
+Summary
+- Drawing samples from specific probability distributions can be done with `r*` functions
+- Standard distributions are built in: Normal, Poisson, Binomial, Exponential, Gamma, etc.
+- The sample function can be used to draw random samples from arbitrary vectors
+- Setting the random number generator seed via set.seed is critical for reproducibility
+
+### R Profiler (part 1)
+Why is My Code So Slow? 
+- Profiling is a systematic way to examine how much time is spend in different parts of a program
+- Useful when trying to optimize your code
+- Often code runs fine once, but what if you have to put it in a loop for 1,000 iterations? Is it still fast enough?
+- Profiling is better than guessing
+
+On Optimizing Your Code
+- Getting biggest impact on speeding up code depends on knowing where the code spends most of its time
+-This cannot be done without performance analysis or profiling
+
+We should forget about small efficiencies, say about 97% of the time: premature optimization is the root of all evel. -- Donald Knuth
+
+General Principles of Optimization General Principles of Optimization
+- Design first, then optimize
+- Remember: Premature optimization is the root of all evil
+- Measure (collect data), don’t guess.
+- If you're going to be scientist, you need to apply the same principles here!
+
+### Using `system.time()`
+- Takes an arbitrary R expression as input (can be wrapped in curly braces) and returns the amount of time taken to evaluate the expression
+- Computes the time (in seconds) needed to execute an expression
+   + If there’s an error, gives time until the error occurred
+- Returns an object of class proc_time
+   + __user time__: time charged to the CPU(s) for this expression
+   + __elapsed time__: "wall clock" time
+- Usually, the user time and elapsed time are relatively close, for straight computing tasks
+- Elapsed time may be greater than user time if the CPU spends a lot of time waiting around
+- Elapsted time may be smaller than the user time if your machine has multiple cores/processors (and is capable of using them)
+   + Multi-threaded BLAS libraries (vecLib/Accelerate, ATLAS, ACML, MKL)
+   + Parallel processing via the parallel package
+
+```{r}
+## Elapsed time > user time
+system.time(readLines("http://www.jhsph.edu"))
+
+## Elapsed time < user time
+hilbert <- function(n) {
+ i <- 1:n
+ 1 / outer(i - 1, i, "+")
+}
+x <- hilbert(1000)
+system.time(svd(x))
+```
+
+Timing Longer Expressions
+```{r}
+system.time({
+   n <- 1000
+   r <- numeric(n)
+   for (i in 1:n) {
+      x <- rnorm(n)
+      r[i] <- mean(x)
+   }
+})
+```
+
+### Beyond `system.time()`
+- Using `system.time()` allows you to test certain functions or code blocks to see if they are taking excessive amounts of time
+- Assumes you already know where the problem is and can call `system.time()` on it
+- What if you don’t know where to start?
+
+### The R Profiler
+- The `Rprof()` function starts the profiler in R
+- The `summaryRprof()` function summarizes the output from `Rprof()` (otherwise it’s not readable)
+- DO NOT use `system.time()` and `Rprof()` together or you will be sad
+- `Rprof()` keeps track of the function call stack at regularly sampled intervals and tabulates how much time is spend in each function
+- Default sampling interval is 0.02 seconds
+- NOTE: If your code runs very quickly, the profiler is not useful, but then you probably don't need it in that case
+
+```{r}
+## lm(y ~ x)
+sample.interval=10000
+```
+
+### Using `summaryRprof()`
+- The `summaryRprof()` function tabulates the R profiler output and calculates how much time is
+spend in which function
+- There are two methods for normalizing the data
+- "`by.total`" divides the time spend in each function by the total run time
+- "`by.self` does the same but first subtracts out time spent in functions above in the call stack
+
+### By Total
+```{r, eval=FALSE}
+$by.total
+$by.self
+$sample.interval
+$sampling.time
+```
+
+### Summary
+- `Rprof()` runs the profiler for performance of analysis of R code
+- `summaryRprof()` summarizes the output of `Rprof()` and gives percent of time spent in each function (with two types of normalization)
+- Good to break your code into functions so that the profiler can give useful information about where time is being spent
+- C or Fortran code is not profiled
+
+
+### Swirl Looking at Data
+We are given a data variable called `plants` to work with
+```{r,eval=FALSE}
+ls(plants) # displays the variables inside plants
+ls() # displays the variables in the workspace
+class(plants) # tells the data type of plants
+dim(plants) # gives number of rows and columns
+nrow(plants)
+ncol(plants)
+object.size(plants)
+names(plants) # gives the variable names
+head(plants) # gives a glimpse of the first 6 rows of data
+head(plants,10) # gives 10 rows
+tail(plants,15) # gives last 15 rows
+summary(plants) # gives a better feel for missing data
+table(plants$Active_Growth_Period) # shows growth period data
+str(plants) # nicely displays key structure
+```
+
+### Swirl Simulation
+```{r, eval=FALSE}
+?sample
+sample(1:6, 4, replace = TRUE) #simulate rolling four six-sided dice:
+sample(1:20, 10) # 10 numbers from 1 to 20, no repeats
+LETTERS
+sample(LETTERS)
+flips<-sample(c(0,1),100,replace=TRUE,prob=c(0.3,0.7))
+# flip a biased coin 100 times
+sum(flips) # count number of 1's
+?rbinom
+rbinom(1, size = 100, prob = 0.7) # 1 observation, 100 flips
+flips2 <- rbinom(100, size = 1, prob = 0.7) # 100 observations, 1 flip
+flips2
+sum(flips2)
+rnorm(10,mean=100, sd=25)
+rpois(5,lambda=10)
+my_pois <- replicate(100, rpois(5, 10)) # repeat operation 100 times and store result
+my_pois
+cm<-colMeans(my_pois)
+hist(cm)
+```
+
+### Visualizing Data
+```{r}
+data(cars)
+head(cars)
+plot(cars) # short for scatter plot
+#?plot
+plot(x = cars$speed, y = cars$dist)
+plot(x = cars$dist, y = cars$speed)
+plot(x = cars$speed, y = cars$dist, xlab="Speed", ylab="Stopping Distance")
+plot(cars,main="My Plot")
+plot(cars, sub="My Plot Subtitle")
+plot(cars, col=2) # red points
+plot(cars,xlim=c(10,15)) # restrict x-values
+plot(cars, pch=2) #plot triangles
+
+data(mtcars)
+boxplot(formula = mpg ~ cyl, data = mtcars)
+hist(mtcars$mpg)
+```
+
+## Programming Assignment 3
+
+```{r,eval=FALSE}
+setwd("~/datasciencecoursera/Coursera/RProgrammingWeek4")
+source("best.R")
+outcome <- read.csv("outcome-of-care-measures.csv", colClasses = "character")
+head(outcome)
+# To make a simple histogram of the 30-day death rates from heart attack
+# (column 11 in the outcome dataset): Because we originally read the data in as
+# character (by specifying colClasses = "character" we need to coerce the 
+# columnto be numeric.
+outcome[, 11] <- suppressWarnings(as.numeric(outcome[, 11]))
+outcome[, 17] <- suppressWarnings(as.numeric(outcome[, 17]))
+outcome[, 23] <- suppressWarnings(as.numeric(outcome[, 23]))
+hist(outcome[,11])
+bystate <- split(outcome,outcome$State)
+getstate <- bystate["ID"]
+consider <- outcome[complete.cases(outcome[,c(2,11,17,23)]),] # remove na's
+df <- data.frame(consider[,c(2,11,17,23)])
+
+reorder <- df[order(df$Hopital.Name),]
+
+df<-df[order(df[2]),]
+smallest <- rapply(df[2],min)
+ties <- which(df[2] == smallest)
+newframe<-df[ties,]
+
+alphabetical <- newframe[order(newframe$Hopital.Name),]
+```

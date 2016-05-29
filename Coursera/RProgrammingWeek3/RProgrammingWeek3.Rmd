@@ -211,8 +211,8 @@ How do you know that something is wrong with your function?
 
 ## Debugging Tools
 The primary tools for debugging functions in R are
-These are interactive tools specifically designed to allow you to pick through a function. There’s also
-the more blunt technique of inserting print/cat statements in the function.
+These are interactive tools specifically designed to allow you to pick through a function. There’s also the more blunt technique of inserting print/cat statements in the function.
+
 - `traceback:` prints out the function call stack after an error occurs; does nothing if there’s no error
 - `debug:` flags a function for “debug” mode which allows you to step through execution of a function
 one line at a time
@@ -252,4 +252,65 @@ shape_mat<-sapply(flag_shapes,range)
 unique(c(3, 4, 5, 5, 5, 6, 6)) # removes duplicates
 unique_vals <- lapply(flags, unique) # get unique values for each variable in the flags dataset.
 lapply(unique_vals, function(elem) elem[2]) # returns the second value in the list of unique vals
+
+vapply(flags, class, character(1)) # gets same as sapply(flags, class)
+table(flags$landmass) # gives the number of flags on each continent
+table(flags$animate) # gives the number of flags with/without an animate image
+tapply(flags$animate, flags$landmass, mean) # applies the mean function to 
+# the 'animate' variable separately for each of the six landmass groups, thus giving us the proportion of flags containing an animate image WITHIN each landmass group
+
+tapply(flags$population, flags$red, summary)
+# summary of population values (in round millions) for countries with and without the color red on their flag
+
+tapply(flags$population, flags$landmass, summary)
+# summary of population values for each of the six landmasses
+```
+
+
+## Week 3 Quiz
+Take a look at the 'iris' dataset that comes with R. The data can be loaded with the code:
+
+```{r eval=FALSE}
+library(datasets)
+data(iris)
+```
+A description of the dataset can be found by running
+```{r eval=FALSE}
+?iris
+```
+There will be an object called 'iris' in your workspace. In this dataset, what is the mean of 'Sepal.Length' for the species virginica? Please round your answer to the nearest whole number.
+ 
+```{r}
+sp <- split(iris,iris$Species)
+mean(sp$virginica$Sepal.Length)
+```
+
+Continuing with the 'iris' dataset from the previous Question, what R code returns a vector of the means of the variables 'Sepal.Length', 'Sepal.Width', 'Petal.Length', and 'Petal.Width'
+
+```{r}
+apply(iris[, 1:4], 2, mean)
+# The number 2 indicates that the means of columns are computed. To get a mean of the row use a 1.
+```
+
+Load the 'mtcars' dataset in R with the following code
+```{r}
+library(datasets)
+data(mtcars)
+```
+There will be an object names 'mtcars' in your workspace. You can find some information about the dataset by running
+```{r}
+?mtcars
+```
+How can one calculate the average miles per gallon (mpg) by number of cylinders in the car (cyl)?
+```{r}
+sapply(split(mtcars$mpg, mtcars$cyl), mean)
+tapply(mtcars$mpg,mtcars$cyl,mean)
+with(mtcars, tapply(mpg, cyl, mean))
+```
+
+Continuing with the 'mtcars' dataset from the previous Question, what is the absolute difference between the average horsepower of 4-cylinder cars and the average horsepower of 8-cylinder cars?
+
+```{r}
+HPbyCyl<-tapply(mtcars$hp, mtcars$cyl, mean)
+HPbyCyl['8']-HPbyCyl['4']
 ```
